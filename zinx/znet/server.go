@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -17,6 +18,16 @@ type Server struct {
 	IP string
 	// 服务器端口
 	Port int
+}
+
+// 当前客户端连接所绑定hadle api
+func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	fmt.Println("[Conn Handle] CallbackToClient ...")
+	if _, err := conn.Write(data[:cnt]); err != nil {
+		fmt.Printf("Write failed, err: %v\n", err)
+		return errors.New("CallbackToClient failed:" + err.Error())
+	}
+	return nil
 }
 
 // 实现IServer接口的方法
@@ -40,6 +51,8 @@ func (s *Server) Start() {
 
 		fmt.Println("start Zinx server succ.", s.Name, "succ, Listenning...")
 
+		var cid uint32 = 0
+
 		// 3 阻塞的等待客户端连接，处理客户端连接业务（读写）
 		for {
 			// 如果有客户端连接过来，阻塞会返回
@@ -49,25 +62,9 @@ func (s *Server) Start() {
 				continue
 			}
 
-			// 处理该新连接请求的业务方法， 然后直接关闭连接
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					cnt, err := conn.Read(buf)
-					if err != nil {
-						fmt.Printf("Read failed, err: %v\n", err)
-						continue
-					}
-
-					fmt.Printf("recv client buf %s, cnt %d\n", buf, cnt)
-
-					// 回显功能
-					if _, err := conn.Write(buf[:cnt]); err != nil {
-						fmt.Printf("Write failed, err: %v\n", err)
-						continue
-					}
-				}
-			}()
+			dealConn := NewConnection(cid, conn, CallBackToClient)
+			cid++
+			go dealConn.Start()
 		}
 	}()
 }
