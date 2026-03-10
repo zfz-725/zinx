@@ -17,27 +17,31 @@ type PingRouter struct {
 // Test PreHandle
 func (this *PingRouter) PreHandle(request ziface.IRequest) {
 	fmt.Println("Call PingRouter PreHandle")
-	_, err := request.GetConnection().GetTCPConnection().Write([]byte("before ping...\n"))
+	err := request.GetConnection().SendMsg(0, []byte("before ping...\n"))
 	if err != nil {
-		fmt.Printf("PreHandle Write failed, err: %v\n", err)
+		fmt.Printf("PreHandle SendMsg failed, err: %v\n", err)
 	}
 }
 
 // Test Handle
 func (this *PingRouter) Handle(request ziface.IRequest) {
 	fmt.Println("Call PingRouter Handle")
-	_, err := request.GetConnection().GetTCPConnection().Write([]byte("ping... ping... ping\n"))
+	// 先读取客户端数据，再回写
+	msgID := request.GetMsgID()
+	data := request.GetData()
+	fmt.Printf("MsgID: %d, Data: %s\n", msgID, string(data))
+	err := request.GetConnection().SendMsg(1, []byte("ping... ping... ping\n"))
 	if err != nil {
-		fmt.Printf("Handle Write failed, err: %v\n", err)
+		fmt.Printf("Handle SendMsg failed, err: %v\n", err)
 	}
 }
 
 // Test PostHandle
 func (this *PingRouter) PostHandle(request ziface.IRequest) {
 	fmt.Println("Call PingRouter PostHandle")
-	_, err := request.GetConnection().GetTCPConnection().Write([]byte("after ping...\n"))
+	err := request.GetConnection().SendMsg(2, []byte("after ping...\n"))
 	if err != nil {
-		fmt.Printf("PostHandle Write failed, err: %v\n", err)
+		fmt.Printf("PostHandle SendMsg failed, err: %v\n", err)
 	}
 }
 

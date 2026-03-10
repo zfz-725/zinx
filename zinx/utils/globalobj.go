@@ -33,7 +33,7 @@ type GlobalObj struct {
 	// 服务器最大连接数
 	MaxConn int
 	// 每个连接的最大消息包大小
-	MaxMsgSize uint32
+	MaxPackageSize uint32
 }
 
 // 定义一个全局的对象
@@ -42,6 +42,9 @@ var GlobalObject *GlobalObj
 // 从conf/zinx.json加载配置
 func (g *GlobalObj) Reload() {
 	configData, err := os.ReadFile("../conf/zinx.json")
+	if os.IsNotExist(err) {
+		return
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -54,12 +57,12 @@ func (g *GlobalObj) Reload() {
 
 func init() {
 	GlobalObject = &GlobalObj{
-		Name:       "ZinxServerApp",
-		Version:    "V0.4",
-		Host:       "0.0.0.0",
-		TcpPort:    8999,
-		MaxConn:    1000,
-		MaxMsgSize: 4096,
+		Name:           "ZinxServerApp",
+		Version:        "V0.4",
+		Host:           "0.0.0.0",
+		TcpPort:        8999,
+		MaxConn:        1000,
+		MaxPackageSize: 4096,
 	}
 
 	// 从conf/zinx.json加载配置

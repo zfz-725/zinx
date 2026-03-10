@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/zfz-725/zinx/utils"
 	"github.com/zfz-725/zinx/ziface"
 )
 
@@ -44,18 +43,38 @@ func (c *Connection) StartReader() {
 		defer fmt.Println("StartReader goroutine exit... ConnID:", c.ConnID, "RemoteAddr:", c.Conn.RemoteAddr())
 		defer c.Stop()
 		for {
-			// 读取客户端数据到buf中
-			buf := make([]byte, utils.GlobalObject.MaxMsgSize)
-			cnt, err := c.Conn.Read(buf)
+
+			// 创建一个拆包器
+			dp := NewDataPack()
+
+			// 读取客户端的Msg Head
+			msgHead := make([]byte, dp.GetHeadLen())
+			_, err := c.Conn.Read(msgHead)
 			if err != nil {
 				fmt.Printf("Read failed, err: %v\n", err)
 				continue
+			}
+			// 拆包，得到msgID 和 dataLen 放在msg消息中
+			msg, err := dp.Unpack(msgHead)
+			if err != nil {
+				fmt.Printf("Unpack failed, err: %v\n", err)
+				continue
+			}
+			// 根据dataLen，再次读取data
+			if msg.GetMsgLen() > 0 {
+				data := make([]byte, msg.GetMsgLen())
+				_, err = c.Conn.Read(data)
+				if err != nil {
+					fmt.Printf("Read failed, err: %v\n", err)
+					continue
+				}
+				msg.SetData(data)
 			}
 
 			// 得到当前conn数据的Request请求数据
 			req := &Request{
 				conn: c,
-				data: buf[:cnt],
+				msg:  msg,
 			}
 
 			// 执行注册的路由方法
@@ -66,6 +85,27 @@ func (c *Connection) StartReader() {
 			}(req)
 		}
 	}()
+}
+
+// 发送数据
+func (c *Connection) SendMsg(msgID uint32, data []byte) error {
+	if c.isClosed {
+		return errors.New("Connection closed when send data")
+	}
+	dp := NewDataPack()
+	// 先将msg进行封包
+	msg, err := dp.Pack(NewMessage(msgID, data))
+	if err != nil {
+		fmt.Printf("Pack failed, err: %v\n", err)
+		return err
+	}
+	// 写入数据
+	_, err = c.Conn.Write(msg)
+	if err != nil {
+		fmt.Printf("Write failed, err: %v\n", err)
+		return err
+	}
+	return nil
 }
 
 // 启动连接
@@ -103,12 +143,4 @@ func (c *Connection) GetConnID() uint32 {
 // 获取连接的远程节点地址
 func (c *Connection) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
-}
-
-// 发送数据
-func (c *Connection) Send(data []byte) error {
-	if c.isClosed {
-		return errors.New("Connection closed when send data")
-	}
-	return nil
 }
