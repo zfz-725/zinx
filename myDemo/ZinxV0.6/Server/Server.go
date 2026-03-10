@@ -45,12 +45,49 @@ func (this *PingRouter) PostHandle(request ziface.IRequest) {
 	}
 }
 
+// hello test 自定义路由
+type HelloRouter struct {
+	znet.BaseRouter
+}
+
+// Test PreHandle
+func (this *HelloRouter) PreHandle(request ziface.IRequest) {
+	fmt.Println("Call HelloRouter PreHandle")
+	err := request.GetConnection().SendMsg(0, []byte("before hello...\n"))
+	if err != nil {
+		fmt.Printf("PreHandle SendMsg failed, err: %v\n", err)
+	}
+}
+
+// Test Handle
+func (this *HelloRouter) Handle(request ziface.IRequest) {
+	fmt.Println("Call HelloRouter Handle")
+	// 先读取客户端数据，再回写
+	msgID := request.GetMsgID()
+	data := request.GetData()
+	fmt.Printf("MsgID: %d, Data: %s\n", msgID, string(data))
+	err := request.GetConnection().SendMsg(1, []byte("hello... hello... hello\n"))
+	if err != nil {
+		fmt.Printf("Handle SendMsg failed, err: %v\n", err)
+	}
+}
+
+// Test PostHandle
+func (this *HelloRouter) PostHandle(request ziface.IRequest) {
+	fmt.Println("Call HelloRouter PostHandle")
+	err := request.GetConnection().SendMsg(2, []byte("after hello...\n"))
+	if err != nil {
+		fmt.Printf("PostHandle SendMsg failed, err: %v\n", err)
+	}
+}
+
 func main() {
 	// 创建一个Zinx服务器句柄
 	s := znet.NewServer()
 
 	// 添加一个自定义路由
-	s.AddRouter(&PingRouter{})
+	s.AddRouter(0, &PingRouter{})
+	s.AddRouter(1, &HelloRouter{})
 
 	// 启动服务器
 	s.Serve()

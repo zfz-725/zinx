@@ -22,7 +22,7 @@ func main() {
 	// 3 写数据
 	for {
 		dp := znet.NewDataPack()
-		msg, err := dp.Pack(znet.NewMessage(0, []byte("Hello Zinx V0.5")))
+		msg, err := dp.Pack(znet.NewMessage(1, []byte("Hello Zinx V0.6")))
 		if err != nil {
 			fmt.Printf("Pack failed, err: %v\n", err)
 			continue
