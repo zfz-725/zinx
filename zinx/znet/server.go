@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/zfz-725/zinx/utils"
 	"github.com/zfz-725/zinx/ziface"
 )
 
@@ -24,6 +25,8 @@ type Server struct {
 // 实现IServer接口的方法
 // 启动服务器
 func (s *Server) Start() {
+	fmt.Printf("[Zinx] Server Name: %s, Version: %s, Host: %s, Port: %d\n", utils.GlobalObject.Name, utils.GlobalObject.Version, utils.GlobalObject.Host, utils.GlobalObject.TcpPort)
+	fmt.Printf("[Zinx] MaxConn: %d, MaxMsgSize: %d\n", utils.GlobalObject.MaxConn, utils.GlobalObject.MaxMsgSize)
 	fmt.Printf("[Start] Server Listener at IP : %s, Port %d, is starting\n", s.IP, s.Port)
 
 	go func() {
@@ -81,12 +84,12 @@ func (s *Server) AddRouter(router ziface.IRouter) {
 	fmt.Println("Add Router Succeed!")
 }
 
-func NewServer(name string) ziface.IServer {
+func NewServer() ziface.IServer {
 	return &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      8999,
+		IP:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TcpPort,
 		Router:    nil,
 	}
 }

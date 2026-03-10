@@ -1,0 +1,8 @@
+{
+    "Name": "ZinxV0.4",
+    "Version": "0.4",
+    "Host": "0.0.0.0",
+    "TcpPort": 8999,
+    "MaxConn": 3,
+    "MaxMsgSize": 4096
+}
