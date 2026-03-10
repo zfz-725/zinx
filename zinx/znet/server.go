@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"errors"
 	"fmt"
 	"net"
 
@@ -18,16 +17,8 @@ type Server struct {
 	IP string
 	// 服务器端口
 	Port int
-}
-
-// 当前客户端连接所绑定hadle api
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-	fmt.Println("[Conn Handle] CallbackToClient ...")
-	if _, err := conn.Write(data[:cnt]); err != nil {
-		fmt.Printf("Write failed, err: %v\n", err)
-		return errors.New("CallbackToClient failed:" + err.Error())
-	}
-	return nil
+	// 路由
+	Router ziface.IRouter
 }
 
 // 实现IServer接口的方法
@@ -62,7 +53,7 @@ func (s *Server) Start() {
 				continue
 			}
 
-			dealConn := NewConnection(cid, conn, CallBackToClient)
+			dealConn := NewConnection(cid, conn, s.Router)
 			cid++
 			go dealConn.Start()
 		}
@@ -84,11 +75,18 @@ func (s *Server) Serve() {
 	select {}
 }
 
+// 添加路由
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+	fmt.Println("Add Router Succeed!")
+}
+
 func NewServer(name string) ziface.IServer {
 	return &Server{
 		Name:      name,
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      8999,
+		Router:    nil,
 	}
 }
