@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/zfz-725/zinx/utils"
 	"github.com/zfz-725/zinx/ziface"
@@ -28,6 +29,9 @@ type Connection struct {
 	MsgHandler ziface.IMsgHandler
 	// 无缓冲的管道，用于读、写
 	MsgChan chan []byte
+	// 连接属性
+	property     map[string]interface{}
+	propertyLock sync.RWMutex
 }
 
 // 初始化连接模块的方法
@@ -40,6 +44,7 @@ func NewConnection(tcpServer ziface.IServer, connID uint32, conn *net.TCPConn, m
 		ExitChan:   make(chan bool, 1),
 		MsgHandler: msgHandler,
 		MsgChan:    make(chan []byte),
+		property:   make(map[string]interface{}),
 	}
 	tcpServer.GetConnManager().Add(c)
 	return c
@@ -179,4 +184,29 @@ func (c *Connection) GetConnID() uint32 {
 // 获取连接的远程节点地址
 func (c *Connection) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
+}
+
+// 设置连接属性
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+	c.property[key] = value
+}
+
+// 获取连接属性
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.RLock()
+	defer c.propertyLock.RUnlock()
+	value, ok := c.property[key]
+	if !ok {
+		return nil, errors.New("property not found")
+	}
+	return value, nil
+}
+
+// 删除连接属性
+func (c *Connection) DelProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+	delete(c.property, key)
 }

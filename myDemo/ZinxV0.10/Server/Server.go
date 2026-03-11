@@ -95,6 +95,8 @@ func main() {
 		if err := conn.SendMsg(202, []byte("DoConnection BEGIN")); err != nil {
 			fmt.Printf("OnConnStart SendMsg failed, err: %v\n", err)
 		}
+		// 设置连接属性
+		conn.SetProperty("Name", "ZinxV0.10")
 	})
 
 	// 设置服务器关闭连接之前的钩子函数
@@ -102,6 +104,13 @@ func main() {
 		fmt.Printf("OnConnStop, connID: %d\n", conn.GetConnID())
 		if err := conn.SendMsg(203, []byte("DoConnection END")); err != nil {
 			fmt.Printf("OnConnStop SendMsg failed, err: %v\n", err)
+		}
+		// 获取连接属性
+		name, err := conn.GetProperty("Name")
+		if err != nil {
+			fmt.Printf("GetProperty failed, err: %v\n", err)
+		} else {
+			fmt.Printf("Name: %s\n", name.(string))
 		}
 	})
 

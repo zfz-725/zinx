@@ -16,6 +16,12 @@ type IConnection interface {
 	GetRemoteAddr() net.Addr
 	// 发送数据
 	SendMsg(msgID uint32, data []byte) error
+	// 设置连接属性
+	SetProperty(key string, value interface{})
+	// 获取连接属性
+	GetProperty(key string) (interface{}, error)
+	// 删除连接属性
+	DelProperty(key string)
 }
 
 // 定义一个处理连接业务的方法
