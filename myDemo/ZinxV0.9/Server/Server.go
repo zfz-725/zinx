@@ -89,6 +89,22 @@ func main() {
 	s.AddRouter(0, &PingRouter{})
 	s.AddRouter(1, &HelloRouter{})
 
+	// 设置服务器创建连接之后的钩子函数
+	s.SetOnConnStart(func(conn ziface.IConnection) {
+		fmt.Printf("OnConnStart, connID: %d\n", conn.GetConnID())
+		if err := conn.SendMsg(202, []byte("DoConnection BEGIN")); err != nil {
+			fmt.Printf("OnConnStart SendMsg failed, err: %v\n", err)
+		}
+	})
+
+	// 设置服务器关闭连接之前的钩子函数
+	s.SetOnConnStop(func(conn ziface.IConnection) {
+		fmt.Printf("OnConnStop, connID: %d\n", conn.GetConnID())
+		if err := conn.SendMsg(203, []byte("DoConnection END")); err != nil {
+			fmt.Printf("OnConnStop SendMsg failed, err: %v\n", err)
+		}
+	})
+
 	// 启动服务器
 	s.Serve()
 }

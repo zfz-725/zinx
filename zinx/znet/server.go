@@ -20,6 +20,13 @@ type Server struct {
 	Port int
 	// 路由
 	MsgHandler ziface.IMsgHandler
+	// 连接管理
+	ConnManager ziface.IConnectionManager
+
+	// 服务器创建连接之后的钩子函数
+	OnConnStart func(conn ziface.IConnection)
+	// 服务器关闭连接之前的钩子函数
+	OnConnStop func(conn ziface.IConnection)
 }
 
 // 实现IServer接口的方法
@@ -59,7 +66,15 @@ func (s *Server) Start() {
 				continue
 			}
 
-			dealConn := NewConnection(cid, conn, s.MsgHandler)
+			// 设置最大连接
+			if s.ConnManager.Len() >= utils.GlobalObject.MaxConn {
+				fmt.Printf("MaxConn Reached, refuse new connection, connID: %d\n", cid)
+				// TODO给客户端放回一个错误信息
+				conn.Close()
+				continue
+			}
+
+			dealConn := NewConnection(s, cid, conn, s.MsgHandler)
 			cid++
 			go dealConn.Start()
 		}
@@ -68,7 +83,9 @@ func (s *Server) Start() {
 
 // 停止服务器
 func (s *Server) Stop() {
-	// TODO 将服务器的资源、连接信息、路由信息等进行释放
+	// 将服务器的资源、连接信息、路由信息等进行释放
+	fmt.Println("Stop Zinx server...")
+	s.ConnManager.Clear()
 }
 
 // 运行服务器
@@ -87,12 +104,42 @@ func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 	fmt.Println("Add Router Succeed!")
 }
 
+// 获取当前Server的连接管理器
+func (s *Server) GetConnManager() ziface.IConnectionManager {
+	return s.ConnManager
+}
+
 func NewServer() ziface.IServer {
 	return &Server{
-		Name:       utils.GlobalObject.Name,
-		IPVersion:  "tcp4",
-		IP:         utils.GlobalObject.Host,
-		Port:       utils.GlobalObject.TcpPort,
-		MsgHandler: NewMsgHandler(),
+		Name:        utils.GlobalObject.Name,
+		IPVersion:   "tcp4",
+		IP:          utils.GlobalObject.Host,
+		Port:        utils.GlobalObject.TcpPort,
+		MsgHandler:  NewMsgHandler(),
+		ConnManager: NewConnectionManager(),
+	}
+}
+
+func (s *Server) SetOnConnStart(hookFunc func(conn ziface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+func (s *Server) SetOnConnStop(hookFunc func(conn ziface.IConnection)) {
+	s.OnConnStop = hookFunc
+}
+
+// 调用服务器创建连接之后的钩子函数
+func (s *Server) CallOnConnStart(conn ziface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Printf("CallOnConnStart, connID: %d\n", conn.GetConnID())
+		s.OnConnStart(conn)
+	}
+}
+
+// 调用服务器关闭连接之前的钩子函数
+func (s *Server) CallOnConnStop(conn ziface.IConnection) {
+	if s.OnConnStop != nil {
+		fmt.Printf("CallOnConnStop, connID: %d\n", conn.GetConnID())
+		s.OnConnStop(conn)
 	}
 }

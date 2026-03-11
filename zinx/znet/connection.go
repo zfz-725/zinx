@@ -14,6 +14,8 @@ import (
 */
 
 type Connection struct {
+	// 当前conn隶属于哪个Server
+	TcpServer ziface.IServer
 	// 当前连接的ID
 	ConnID uint32
 	// 当前连接的socket TCP套接字
@@ -29,8 +31,9 @@ type Connection struct {
 }
 
 // 初始化连接模块的方法
-func NewConnection(connID uint32, conn *net.TCPConn, msgHandler ziface.IMsgHandler) *Connection {
-	return &Connection{
+func NewConnection(tcpServer ziface.IServer, connID uint32, conn *net.TCPConn, msgHandler ziface.IMsgHandler) *Connection {
+	c := &Connection{
+		TcpServer:  tcpServer,
 		ConnID:     connID,
 		Conn:       conn,
 		isClosed:   false,
@@ -38,6 +41,8 @@ func NewConnection(connID uint32, conn *net.TCPConn, msgHandler ziface.IMsgHandl
 		MsgHandler: msgHandler,
 		MsgChan:    make(chan []byte),
 	}
+	tcpServer.GetConnManager().Add(c)
+	return c
 }
 
 func (c *Connection) StartReader() {
@@ -137,6 +142,9 @@ func (c *Connection) Start() {
 
 	// 启动从当前连接写数据的业务
 	go c.StartWriter()
+
+	// 调用服务器创建连接之后的钩子函数
+	c.TcpServer.CallOnConnStart(c)
 }
 
 // 停止连接
@@ -146,6 +154,10 @@ func (c *Connection) Stop() {
 		return
 	}
 	c.isClosed = true
+	// 从连接管理器中删除连接
+	c.TcpServer.GetConnManager().Remove(c)
+	// 调用服务器关闭连接之前的钩子函数
+	c.TcpServer.CallOnConnStop(c)
 	// 关闭socket连接
 	c.Conn.Close()
 	// 通知writer goroutine退出
