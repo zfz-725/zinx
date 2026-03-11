@@ -29,6 +29,9 @@ func (s *Server) Start() {
 	fmt.Printf("[Zinx] MaxConn: %d, MaxPackageSize: %d\n", utils.GlobalObject.MaxConn, utils.GlobalObject.MaxPackageSize)
 	fmt.Printf("[Start] Server Listener at IP : %s, Port %d, is starting\n", s.IP, s.Port)
 
+	// 启动Worker工作池
+	s.MsgHandler.StartWorkerPool()
+
 	go func() {
 		// 1 获取TCP的Addr
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))

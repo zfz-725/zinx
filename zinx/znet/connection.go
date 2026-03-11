@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/zfz-725/zinx/utils"
 	"github.com/zfz-725/zinx/ziface"
 )
 
@@ -80,8 +81,13 @@ func (c *Connection) StartReader() {
 				msg:  msg,
 			}
 
-			// 执行注册的路由方法
-			go c.MsgHandler.DoMsgHandler(req)
+			if utils.GlobalObject.WorkerPoolSize > 0 {
+				// 开启工作池处理请求
+				c.MsgHandler.SendMsgToTaskQueue(req)
+			} else {
+				// 执行注册的路由方法
+				go c.MsgHandler.DoMsgHandler(req)
+			}
 		}
 	}()
 }
