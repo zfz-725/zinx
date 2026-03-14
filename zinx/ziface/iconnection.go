@@ -2,27 +2,32 @@ package ziface
 
 import "net"
 
-// 定义连接模块的抽象层
+// IConnection 定义连接模块的抽象层
 type IConnection interface {
-	// 启动连接
+	// Start 启动连接 - 让当前的连接准备开始工作
 	Start()
-	// 停止连接
+	// Stop 停止连接 - 结束当前连接的工作
 	Stop()
-	// 获取当前连接的绑定socket conn
+	// GetTCPConnection 获取当前连接绑定的 socket conn
 	GetTCPConnection() *net.TCPConn
-	// 获取连接ID
+	// GetConnID 获取当前连接的连接ID
 	GetConnID() uint32
-	// 获取连接的远程节点地址
-	GetRemoteAddr() net.Addr
-	// 发送数据
-	SendMsg(msgID uint32, data []byte) error
-	// 设置连接属性
+	// RemoteAddr 获取远程客户端的 TCP状态 IP Port
+	RemoteAddr() net.Addr
+	// SendMsg 发送数据给远程客户端
+	//Send(data []byte) error
+	SendMsg(msgId uint32, data []byte) error
+
+	// SetProperty 设置连接属性
 	SetProperty(key string, value interface{})
-	// 获取连接属性
+	// GetProperty 获取连接属性
 	GetProperty(key string) (interface{}, error)
-	// 删除连接属性
-	DelProperty(key string)
+	// RemoveProperty 移除连接属性
+	RemoveProperty(key string)
 }
 
-// 定义一个处理连接业务的方法
+// HandleFunc 定义一个统一处理连接业务的接口
+// 参数1: 原生socket连接
+// 参数2: 客户端请求的数据
+// 参数3: 客户端请求数据长度
 type HandleFunc func(*net.TCPConn, []byte, int) error

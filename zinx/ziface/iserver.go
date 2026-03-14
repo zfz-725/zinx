@@ -1,23 +1,26 @@
 package ziface
 
-// 定义一个服务器接口
+// IServer 定义一个服务器接口
 type IServer interface {
-	// 启动服务器
+	// Start 启动服务器
 	Start()
-	// 停止服务器
+	// Stop 停止服务器
 	Stop()
-	// 运行服务器
+	// Server 运行服务器
 	Serve()
-	// 添加路由
+
+	// AddRouter 给当前的服务注册一个路由方法，供客户端的连接处理使用
 	AddRouter(msgID uint32, router IRouter)
-	// 获取当前Server的连接管理器
-	GetConnManager() IConnectionManager
-	// 设置服务器创建连接之后的钩子函数
-	SetOnConnStart(hookFunc func(conn IConnection))
-	// 设置服务器关闭连接之前的钩子函数
-	SetOnConnStop(hookFunc func(conn IConnection))
-	// 调用服务器创建连接之后的钩子函数
+
+	// GetConnMgr 获取当前 server 的连接管理器
+	GetConnMgr() IConnManager
+
+	// SetOnConnStart 注册 OnConnStart 钩子函数
+	SetOnConnStart(func(conn IConnection))
+	// CallOnConnStart 调用 CallOnConnStart 钩子函数
 	CallOnConnStart(conn IConnection)
-	// 调用服务器关闭连接之前的钩子函数
+	// SetOnConnStop 注册 SetOnConnStop 钩子函数
+	SetOnConnStop(func(conn IConnection))
+	// CallOnConnStop 调用 CallOnConnStop 钩子函数
 	CallOnConnStop(conn IConnection)
 }

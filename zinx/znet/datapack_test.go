@@ -2,106 +2,107 @@ package znet
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"testing"
-	"time"
 )
 
 func TestDataPack(t *testing.T) {
-	/*
-		模拟的服务器
+	/**
+	模拟的服务端
 	*/
-	// 1创建socketTCP
-	listener, err := net.Listen("tcp", "127.0.0.1:8999")
+	// 1 创建 socketTCP
+	listener, err := net.Listen("tcp", "127.0.0.1:7777")
 	if err != nil {
-		t.Errorf("Listen failed, err: %v\n", err)
+		fmt.Println("server listen err: ", err)
 		return
 	}
-	defer listener.Close()
-
-	// 2读取客户端数据，拆包处理
+	// 创建一个 goroutine 负责从客户端处理业务
 	go func() {
+		// 2 从客户端读取数据，拆包处理
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				// 监听器关闭时退出循环，不报错
-				break
+				fmt.Println("server accept error: ", err)
 			}
-			defer conn.Close()
+
 			go func(conn net.Conn) {
-				// 处理客户端请求
-				// ----- 拆包过程 -----
-				// 定义一个拆包对象
+				// 处理客户端的请求
+				// -----> 拆包的过程 <-----
+				// 定义一个拆包对象dp
 				dp := NewDataPack()
 				for {
-					// 1第一次从conn读，读取head
+					// 第一次从conn读，把包的head读出来
 					headData := make([]byte, dp.GetHeadLen())
-					_, err := conn.Read(headData)
+					_, err := io.ReadFull(conn, headData)
 					if err != nil {
-						// 连接关闭时退出循环，不报错
+						fmt.Println("read head error: ", err)
 						break
 					}
-					// 2根据head中的datalen，读取data
 					msgHead, err := dp.Unpack(headData)
 					if err != nil {
-						t.Errorf("Unpack head failed, err: %v\n", err)
-						break
+						fmt.Println("server unpack err: ", err)
+						return
 					}
 					if msgHead.GetMsgLen() > 0 {
-						data := make([]byte, msgHead.GetMsgLen())
-						_, err = conn.Read(data)
+						// msg有数据，需要进行第二次读取
+						// 第二次从conn读，根据head的dataLen再读取data内容
+						msg := msgHead.(*Message)
+						msg.Data = make([]byte, msg.GetMsgLen())
+						// 根据dataLen再次从io流中读取
+						_, err := io.ReadFull(conn, msg.Data)
 						if err != nil {
-							// 连接关闭时退出循环，不报错
-							break
+							fmt.Println("server unpack data err: ", err)
+							return
 						}
 
 						// 完整的消息已经读取完毕
-						fmt.Println("ID:", msgHead.GetMsgID(), "DataLen:", msgHead.GetMsgLen(), "Data:", string(data))
+						fmt.Println("---> Recv MsgId: ", msg.Id, ", dataLen = ", msg.DataLen, "data = ", string(msg.Data))
 					}
 				}
 			}(conn)
 		}
 	}()
 
-	/*
-		模拟客户端
+	/**
+	模拟的客户端
 	*/
-	// 1创建socketTCP
-	conn, err := net.Dial("tcp", "127.0.0.1:8999")
+	conn, err := net.Dial("tcp", "127.0.0.1:7777")
 	if err != nil {
-		t.Errorf("Dial failed, err: %v\n", err)
+		fmt.Println("client dial err: ", err)
+		return
 	}
-	defer conn.Close()
-
-	// 2发送数据
+	// 创建一个封包对象 dp
 	dp := NewDataPack()
 
-	// 模拟粘包过程，封装msg一同发送
+	// 模拟粘包过程，封装两个msg一起发送
+	// 封装msg1
 	msg1 := &Message{
-		ID:      1,
-		DataLen: 5,
-		Data:    []byte("hello"),
+		Id:      1,
+		DataLen: 4,
+		Data:    []byte{'z', 'i', 'n', 'x'},
 	}
+	sendData1, err := dp.Pack(msg1)
+	if err != nil {
+		fmt.Println("client pack msg1 error: ", err)
+		return
+	}
+	// 封装msg2
 	msg2 := &Message{
-		ID:      2,
-		DataLen: 5,
-		Data:    []byte("world"),
+		Id:      2,
+		DataLen: 6,
+		Data:    []byte{'h', 'e', 'l', 'l', 'o', '!'},
 	}
-	data1, err := dp.Pack(msg1)
+	sendData2, err := dp.Pack(msg2)
 	if err != nil {
-		t.Errorf("Pack failed, err: %v\n", err)
+		fmt.Println("client pack msg2 error: ", err)
+		return
 	}
-	data2, err := dp.Pack(msg2)
-	if err != nil {
-		t.Errorf("Pack failed, err: %v\n", err)
-	}
-	sendData := append(data1, data2...)
-	_, err = conn.Write(sendData)
-	if err != nil {
-		t.Errorf("Write failed, err: %v\n", err)
-	}
+	// 将两个包粘在一起
+	sendData1 = append(sendData1, sendData2...)
+	// 一次性发送给服务端
+	conn.Write(sendData1)
 
 	// 客户端阻塞
-	<-time.After(time.Second * 3)
-	fmt.Println("Client Test Pass")
+	select {}
 }

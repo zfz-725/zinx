@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 
@@ -8,52 +9,59 @@ import (
 	"github.com/zfz-725/zinx/ziface"
 )
 
-type DataPack struct {
-}
+// DataPack 封包，拆包的具体模块
+type DataPack struct{}
 
+// NewDataPack 拆包、封包实例的初始化方法
 func NewDataPack() *DataPack {
 	return &DataPack{}
 }
 
-// 获取消息头长度
 func (dp *DataPack) GetHeadLen() uint32 {
+	// DataLen uint32（4字节）+ ID uint32（4字节）= 8字节
 	return 8
 }
 
-// 封包
-// datalen|megID|data
+// Pack 封包方法
+//
+//	/dataLen/msgId/data/
 func (dp *DataPack) Pack(msg ziface.IMessage) ([]byte, error) {
-	// 创建一个字节数组，用于存储封包后的结果
-	data := make([]byte, dp.GetHeadLen()+msg.GetMsgLen())
-
-	// 写入消息头
-	binary.BigEndian.PutUint32(data[:4], msg.GetMsgID())
-	binary.BigEndian.PutUint32(data[4:8], msg.GetMsgLen())
-
-	// 写入消息数据
-	copy(data[dp.GetHeadLen():], msg.GetData())
-
-	return data, nil
+	// 创建一个存放bytes字节的缓冲
+	dataBuff := bytes.NewBuffer([]byte{})
+	// 将dataLen写入dataBuff中
+	if err := binary.Write(dataBuff, binary.LittleEndian, msg.GetMsgLen()); err != nil {
+		return nil, err
+	}
+	// 将MsgId写入dataBuff中
+	if err := binary.Write(dataBuff, binary.LittleEndian, msg.GetMsgId()); err != nil {
+		return nil, err
+	}
+	// 将data数据写入dataBuff中
+	if err := binary.Write(dataBuff, binary.LittleEndian, msg.GetData()); err != nil {
+		return nil, err
+	}
+	return dataBuff.Bytes(), nil
 }
 
-// 拆包
-func (dp *DataPack) Unpack(data []byte) (ziface.IMessage, error) {
-	// 创建一个消息头结构体
-	msgHead := &Message{}
+// Unpack 拆包方法，将包的Head信息读出来，再根据Head信息里的data长度，再进行一次读
+func (dp *DataPack) Unpack(binaryData []byte) (ziface.IMessage, error) {
+	// 创建一个从输入二进制数据的ioReader
+	dataBuff := bytes.NewReader(binaryData)
+	// 只解压head信息，得到dataLen和msgID
+	msg := &Message{}
 
-	// 从数据中读取消息头
-	msgHead.ID = binary.BigEndian.Uint32(data[:4])
-	msgHead.DataLen = binary.BigEndian.Uint32(data[4:8])
-
-	if utils.GlobalObject.MaxPackageSize > 0 && msgHead.DataLen > utils.GlobalObject.MaxPackageSize {
-		return nil, errors.New("package size is too large")
+	// 读dataLen
+	if err := binary.Read(dataBuff, binary.LittleEndian, &msg.DataLen); err != nil {
+		return nil, err
+	}
+	// 读msgId
+	if err := binary.Read(dataBuff, binary.LittleEndian, &msg.Id); err != nil {
+		return nil, err
 	}
 
-	// 创建一个消息体结构体
-	msg := &Message{
-		ID:      msgHead.ID,
-		DataLen: msgHead.DataLen,
-		Data:    data[dp.GetHeadLen():],
+	// 判断dataLen是否已经超出允许的最大包长度
+	if utils.GlobalObject.MaxPackageSize > 0 && msg.DataLen > utils.GlobalObject.MaxPackageSize {
+		return nil, errors.New("too Large msg data recv!")
 	}
 
 	return msg, nil

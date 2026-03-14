@@ -1,15 +1,15 @@
 package ziface
 
-/*
-	IRequest接口：
-	实际上是把客户端请求的连接信息和请求数据包装到了一个Request中
-*/
+// IRequest 接口：
+// 实际上是把 客户端请求的连接信息 和 请求的数据 包装到了一个Request中
 
 type IRequest interface {
-	// 获取当前连接
+	// GetConnection 得到当前连接
 	GetConnection() IConnection
-	// 获取请求数据
+
+	// GetData 得到请求的消息数据
 	GetData() []byte
-	// 获取请求消息ID
+
+	// GetMsgID 得到当前请求消息 ID
 	GetMsgID() uint32
 }
