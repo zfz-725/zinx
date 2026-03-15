@@ -6,7 +6,7 @@ import (
 )
 
 /*
-	游戏格子
+游戏格子
 */
 type Grid struct {
 	// 格子ID
@@ -57,7 +57,7 @@ func (g *Grid) GetAllPlayersFromGrid() (players []int) {
 	g.playerLock.RLock()
 	defer g.playerLock.RUnlock()
 
-	for id, _ := range g.players {
+	for id := range g.players {
 		players = append(players, id)
 	}
 

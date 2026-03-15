@@ -111,6 +111,14 @@ func (p *Player) Talk(content string) {
 	}
 }
 
+// 玩家B进入游戏：
+//   ├─► 发送202消息给自己：获取当前周围所有玩家位置（一次性）
+//   ├─► 发送200消息给周围人：通知"我来了"（让A能看到B）
+//   │
+//   ▼
+// 玩家A收到200消息：
+//   └─► A的客户端添加B到画面
+
 // 同步自己和其他玩家的位置信息
 func (p *Player) SyncSurroundPlayer() {
 	// 获取周围玩家
@@ -215,9 +223,19 @@ func (p *Player) UpdateAOI(x, y, z, v float32) {
 		return
 	}
 
+	// 检查格子是否存在，防止空指针错误
+	oldGrid, ok := WorldMgr.AoiMgr.Grids[oldGid]
+	if !ok {
+		return
+	}
+	newGrid, ok := WorldMgr.AoiMgr.Grids[newGid]
+	if !ok {
+		return
+	}
+
 	// 移除旧格子中的玩家，添加到新格子中
-	WorldMgr.AoiMgr.Grids[oldGid].Remove(int(p.Pid))
-	WorldMgr.AoiMgr.Grids[newGid].Add(int(p.Pid))
+	oldGrid.Remove(int(p.Pid))
+	newGrid.Add(int(p.Pid))
 
 	// 比较新旧九宫格
 	oldGrids := WorldMgr.AoiMgr.GetSurroundGrid(oldGid)
@@ -239,7 +257,7 @@ func (p *Player) UpdateAOI(x, y, z, v float32) {
 		if _, ok := sameGrids[o.GID]; !ok {
 			pids := WorldMgr.AoiMgr.Grids[o.GID].GetAllPlayersFromGrid()
 			for _, v := range pids {
-				// 让当前玩家消息在其他玩家的视野中
+				// 让当前玩家消失在其他玩家的视野中
 				player := WorldMgr.GetPlayerByPid(int32(v))
 				player.SendMsg(201, disappear_msg)
 				// 让其他玩家消失在当前玩家的视野中

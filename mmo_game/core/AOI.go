@@ -5,7 +5,7 @@ import (
 )
 
 /*
-	AOI算法管理模块
+AOI算法管理模块
 */
 type AOIManager struct {
 	// 区域左边界坐标
@@ -122,7 +122,7 @@ func (a *AOIManager) GetPidsByPos(x, y float32) (players []int) {
 	grids := a.GetSurroundGrid(gridID)
 
 	for _, g := range grids {
-		for p, _ := range g.players {
+		for p := range g.players {
 			players = append(players, p)
 		}
 	}
@@ -133,17 +133,29 @@ func (a *AOIManager) GetPidsByPos(x, y float32) (players []int) {
 
 // 添加一个PlayerID到一个格子中
 func (a *AOIManager) AddPidToGrid(pid, gid int) {
-	a.Grids[gid].Add(pid)
+	grid, ok := a.Grids[gid]
+	if !ok {
+		return
+	}
+	grid.Add(pid)
 }
 
 // 移除一个格子中的PlayerID
 func (a *AOIManager) RemovePidFromGrid(pid, gid int) {
-	a.Grids[gid].Remove(pid)
+	grid, ok := a.Grids[gid]
+	if !ok {
+		return
+	}
+	grid.Remove(pid)
 }
 
 // 通过GID获取全部的PlayerID
 func (a *AOIManager) GetPidByGid(gid int) (players []int) {
-	players = a.Grids[gid].GetAllPlayersFromGrid()
+	grid, ok := a.Grids[gid]
+	if !ok {
+		return
+	}
+	players = grid.GetAllPlayersFromGrid()
 
 	return
 }
@@ -151,11 +163,19 @@ func (a *AOIManager) GetPidByGid(gid int) (players []int) {
 // 通过坐标将Player添加到一个格子中
 func (a *AOIManager) AddPidByPos(x, y float32, pid int) {
 	gid := a.GetGidByPos(x, y)
-	a.Grids[gid].Add(pid)
+	grid, ok := a.Grids[gid]
+	if !ok {
+		return
+	}
+	grid.Add(pid)
 }
 
 // 通过坐标把一个Player从格子中删除
 func (a *AOIManager) RemovePidFromGridByPos(x, y float32, pid int) {
 	gid := a.GetGidByPos(x, y)
-	a.Grids[gid].Remove(pid)
+	grid, ok := a.Grids[gid]
+	if !ok {
+		return
+	}
+	grid.Remove(pid)
 }
